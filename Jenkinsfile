@@ -20,14 +20,17 @@ pipeline {
                 image: jenkins/inbound-agent:latest
                 resources:
                   requests:
-                    cpu: "250m"
+                    cpu: "200m"
                     memory: "256Mi"
                   limits:
-                    cpu: "500m"
+                    cpu: "400m"
                     memory: "512Mi"
                 command:
                 - cat
                 tty: true
+                env:
+                - name: JENKINS_URL
+                  value: "http://jenkins.jenkins.svc.cluster.local:8080"
               - name: docker
                 image: docker:20.10-dind
                 command:
@@ -36,10 +39,10 @@ pipeline {
                   privileged: true
                 resources:
                   requests:
-                    cpu: "250m"
+                    cpu: "200m"
                     memory: "256Mi"
                   limits:
-                    cpu: "500m"
+                    cpu: "400m"
                     memory: "512Mi"
               - name: kubectl
                 image: bitnami/kubectl:latest
@@ -48,10 +51,10 @@ pipeline {
                 tty: true
                 resources:
                   requests:
-                    cpu: "250m"
+                    cpu: "200m"
                     memory: "256Mi"
                   limits:
-                    cpu: "500m"
+                    cpu: "400m"
                     memory: "512Mi"
             '''
         }
@@ -66,6 +69,7 @@ pipeline {
             steps {
                 container('jenkins-agent') {
                     checkout scm
+                    sh 'pwd'
                     sh 'ls -l /home/jenkins/agent/workspace/my-app-pipeline'
                 }
             }
@@ -74,6 +78,7 @@ pipeline {
             steps {
                 container('docker') {
                     script {
+                        sh 'pwd'
                         sh 'ls -l'
                         sh 'docker --version'
                         def app = docker.build("${ECR_REGISTRY}/${ECR_REPOSITORY}:${IMAGE_TAG}")
