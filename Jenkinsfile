@@ -47,8 +47,10 @@ pipeline {
         stage('Clone Repository') {
             steps {
                 checkout scm
-            }
+                container('jenkins-agent') {
+                    sh 'ls -l /home/jenkins/agent/workspace/my-app-pipeline'
         }
+    }
         stage('Build Docker Image') {
             steps {
                 container('docker') {
