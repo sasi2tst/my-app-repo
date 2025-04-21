@@ -1,40 +1,58 @@
 pipeline {
     agent {
         kubernetes {
+            defaultContainer 'jenkins-agent'
             yaml '''
             apiVersion: v1
             kind: Pod
+            metadata:
+              labels:
+                jenkins: slave
+              namespace: jenkins
             spec:
+              tolerations:
+              - key: "app_type"
+                operator: "Equal"
+                value: "alpha"
+                effect: "NoSchedule"
               containers:
               - name: jenkins-agent
                 image: jenkins/inbound-agent:latest
                 resources:
                   requests:
+                    cpu: "250m"
+                    memory: "256Mi"
+                  limits:
                     cpu: "500m"
                     memory: "512Mi"
-                  limits:
-                    cpu: "1000m"
-                    memory: "1024Mi"
                 command:
                 - cat
                 tty: true
               - name: docker
-                image: docker:20.10
+                image: docker:20.10-dind
                 command:
-                - cat
-                tty: true
-                volumeMounts:
-                - name: docker-sock
-                  mountPath: /var/run/docker.sock
+                - /usr/local/bin/dockerd-entrypoint.sh
+                securityContext:
+                  privileged: true
+                resources:
+                  requests:
+                    cpu: "250m"
+                    memory: "256Mi"
+                  limits:
+                    cpu: "500m"
+                    memory: "512Mi"
               - name: kubectl
                 image: bitnami/kubectl:latest
                 command:
                 - cat
                 tty: true
-              volumes:
-              - name: docker-sock
-                hostPath:
-                  path: /var/run/docker.sock
+                resources:
+                  requests:
+                    cpu: "250m"
+                    memory: "256Mi"
+                  limits:
+                    cpu: "500m"
+                    memory: "512Mi"
             '''
         }
     }
@@ -46,16 +64,18 @@ pipeline {
     stages {
         stage('Clone Repository') {
             steps {
-                checkout scm
                 container('jenkins-agent') {
+                    checkout scm
                     sh 'ls -l /home/jenkins/agent/workspace/my-app-pipeline'
                 }
             }
-        }    
+        }
         stage('Build Docker Image') {
             steps {
                 container('docker') {
                     script {
+                        sh 'ls -l'
+                        sh 'docker --version'
                         def app = docker.build("${ECR_REGISTRY}/${ECR_REPOSITORY}:${IMAGE_TAG}")
                     }
                 }
